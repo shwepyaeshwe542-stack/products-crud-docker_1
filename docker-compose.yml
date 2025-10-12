@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:15-alpine
+    container_name: products_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: Asia/Bangkok
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - products_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Node.js + Express + Prisma)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: products_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
+      PORT: ${BACKEND_PORT:-4000}
+      NODE_ENV: production
+      TZ: Asia/Bangkok
+    ports:
+      - "${BACKEND_PORT:-4000}:${BACKEND_PORT:-4000}"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - products_network
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: products_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-4000}
+      NODE_ENV: production
+      TZ: Asia/Bangkok
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    networks:
+      - products_network
+
+volumes:
+  postgres_data:
+
+networks:
+  products_network:
+    driver: bridge
