@@ -1,12 +1,14 @@
-# Products CRUD Application
+# Products CRUD Application with CI/CD
 
-## System Architecture
-- **Frontend**: Next.js 15 (Port 3000)
-- **Backend**: Node.js + Express + Prisma (Port 4000)
-- **Database**: PostgreSQL 15 (Port 5432)
+Full-stack e-commerce product management system with automated CI/CD pipeline using Jenkins.
 
-## Quick Start
+## 🚀 Features
 
-### Build and Start
-```bash
-docker-compose up -d --build
+- ✅ Full CRUD operations for products
+- ✅ RESTful API with Express.js
+- ✅ Next.js 14 frontend with App Router
+- ✅ PostgreSQL database with Prisma ORM
+- ✅ Docker containerization
+- ✅ Automated CI/CD with Jenkins
+- ✅ Health checks and monitoring
+- ✅ Seed data for testing
