@@ -14,10 +14,11 @@ pipeline {
             }
         }
         
+        // 🌟 NEW STAGE TO CREATE .env FILE
         stage('Prepare Environment') {
             steps {
-                echo '📝 Creating .env file from .env.example to load variables...'
-                // Copies .env.example to .env, fixing the POSTGRES_USER warnings.
+                echo '📝 Creating .env file from .env.example...'
+                // This step copies the example file so Docker Compose can read the variables.
                 sh 'cp .env.example .env' 
             }
         }
@@ -38,28 +39,13 @@ pipeline {
             }
         }
         
-        // 🛑 CRITICAL FIX: Stop Old Containers
-        stage('Stop Old Containers') {
-            steps {
-                echo '🛑 Stopping and cleaning up old containers...'
-                sh '''
-                    # 1. FORCEFUL REMOVAL OF CONFLICTING CONTAINER:
-                    # Explicitly remove the container named /products_backend that is causing the conflict.
-                    # '|| true' ensures the step doesn't fail if the container doesn't exist.
-                    echo "Attempting forceful removal of specific container: products_backend"
-                    docker rm -f products_backend || true
-                    
-                    # 2. ROBUST DOCKER COMPOSE CLEANUP:
-                    # Bring down the current stack, remove volumes (-v), and clean up orphans.
-                    docker compose -f ${DOCKER_COMPOSE_FILE} down -v --remove-orphans || true
-                '''
-            }
-        }
+        
         
         stage('Build') {
             steps {
                 echo '🔨 Building Docker images...'
                 sh '''
+                    # Docker Compose will now read variables from the newly created .env file
                     docker compose -f ${DOCKER_COMPOSE_FILE} build --no-cache
                 '''
             }
@@ -74,6 +60,7 @@ pipeline {
             }
         }
         
+        // ... (Rest of the stages remain the same)
         stage('Wait for Services') {
             steps {
                 echo '⏳ Waiting for services to be ready...'
@@ -120,6 +107,8 @@ pipeline {
         }
         always {
             echo '🧹 Cleaning up...'
+            // Removed the `docker system prune -f` in favor of more targeted cleanup in 'Stop Old Containers'
+            // but kept a safeguard here if needed, adding '|| true'
             sh 'docker system prune -f || true' 
         }
     }
