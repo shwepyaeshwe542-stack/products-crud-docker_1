@@ -1,8 +1,8 @@
-# Stage 1: Build Stage
-# FIX: Switching to node:18-slim to resolve networking/library issues with Prisma downloads
-FROM node:18-slim
+FROM node:18-alpine
 
-# Set working directory inside the container
+# Install OpenSSL (required for Prisma)
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # Copy package files
@@ -27,5 +27,4 @@ RUN mkdir -p uploads
 EXPOSE 4000
 
 # Wait for database, run migrations, seed, then start
-# The sleep 10 gives the DB container a head start before the migration/seed commands run.
-CMD ["sh", "-c", "sleep 10 && npx prisma migrate deploy && npx prisma db seed && npm start"]
+CMD ["sh", "-c", "sleep 15 && npx prisma migrate deploy && npm start"]

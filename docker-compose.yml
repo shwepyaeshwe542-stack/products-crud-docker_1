@@ -1,72 +1,59 @@
 
-
 services:
-  # PostgreSQL Database
   database:
     image: postgres:15-alpine
     container_name: products_db
-    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      TZ: Asia/Bangkok
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     ports:
-      - "127.0.0.1:${DB_PORT:-5432}:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    networks:
-      - products_network
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # Backend API (Node.js + Express + Prisma)
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: products_backend
     restart: unless-stopped
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
-      PORT: ${BACKEND_PORT:-4000}
-      NODE_ENV: production
-      TZ: Asia/Bangkok
+    networks:
+      - app-network
+
+  backend:
+    build: ./backend
+    container_name: products_backend
     ports:
-      - "${BACKEND_PORT:-4000}:${BACKEND_PORT:-4000}"
+      - "${BACKEND_PORT:-4000}:4000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:${DB_PORT}/${POSTGRES_DB}?schema=public
+      - NODE_ENV=production
     depends_on:
       database:
         condition: service_healthy
-    networks:
-      - products_network
     volumes:
       - ./backend/uploads:/app/uploads
-
-  # Frontend (Next.js)
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: products_frontend
     restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-4000}
-      NODE_ENV: production
-      TZ: Asia/Bangkok
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    container_name: products_frontend
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
     depends_on:
       - backend
+    restart: unless-stopped
     networks:
-      - products_network
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres_data:
-
-networks:
-  products_network:
-    driver: bridge
