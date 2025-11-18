@@ -2,6 +2,7 @@ pipeline {
     agent any
     
     environment {
+        // Keeps the project name consistent across runs
         COMPOSE_PROJECT_NAME = 'products-crud'
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
     }
@@ -13,61 +14,57 @@ pipeline {
                 checkout scm
             }
         }
-        
-        // 🌟 NEW STAGE TO CREATE .env FILE
+
         stage('Prepare Environment') {
             steps {
-                echo '📝 Creating .env file from .env.example...'
-                // This step copies the example file so Docker Compose can read the variables.
-                sh 'cp .env.example .env' 
-            }
-        }
-
-        stage('Environment Check') {
-            steps {
-                echo '🔍 Checking environment...'
+                echo '📝 Creating .env file from .env.example and setting password...'
                 sh '''
-                    echo "Docker version:"
-                    docker --version
-                    echo "Docker Compose version:"
-                    docker compose version
-                    echo "Current directory:"
-                    pwd
-                    echo "Files in directory:"
-                    ls -la
+                    # 1. Copy the example file to the active .env file
+                    cp .env.example .env
+                    
+                    # 2. IMPORTANT: Use sed to replace the placeholder password with the actual password expected by docker-compose.yml
+                    # We use 'postgres123' here based on your previous input.
+                    sed -i 's/your_password_here/postgres123/g' .env 
                 '''
             }
         }
         
-        
+        stage('Stop Old Containers') {
+            steps {
+                echo '🛑 Stopping and aggressively removing old containers to prevent conflicts...'
+                sh '''
+                    # 1. Stop and remove services defined in docker-compose.yml
+                    docker compose -f ${DOCKER_COMPOSE_FILE} down || true
+                    
+                    # 2. Forcefully remove old containers and network remnants by their derived names (critical fix)
+                    # The '|| true' ensures the pipeline doesn't fail if the containers don't exist yet.
+                    docker rm -f ${COMPOSE_PROJECT_NAME}_db || true
+                    docker rm -f ${COMPOSE_PROJECT_NAME}_backend || true
+                    docker rm -f ${COMPOSE_PROJECT_NAME}_frontend || true
+                    docker network rm ${COMPOSE_PROJECT_NAME}_default || true
+                '''
+            }
+        }
         
         stage('Build') {
             steps {
-                echo '🔨 Building Docker images...'
-                sh '''
-                    # Docker Compose will now read variables from the newly created .env file
-                    docker compose -f ${DOCKER_COMPOSE_FILE} build --no-cache
-                '''
+                echo '🔨 Building Docker images (using latest code and Dockerfile fixes)...'
+                // --no-cache ensures we rebuild with the latest code/Dockerfile fixes
+                sh "docker compose -f ${DOCKER_COMPOSE_FILE} build --no-cache"
             }
         }
         
         stage('Deploy') {
             steps {
                 echo '🚀 Deploying with Docker Compose...'
-                sh '''
-                    docker compose -f ${DOCKER_COMPOSE_FILE} up -d
-                '''
+                sh "docker compose -f ${DOCKER_COMPOSE_FILE} up -d"
             }
         }
         
-        // ... (Rest of the stages remain the same)
         stage('Wait for Services') {
             steps {
-                echo '⏳ Waiting for services to be ready...'
-                sh '''
-                    echo "Waiting 30 seconds for services to start..."
-                    sleep 30
-                '''
+                echo '⏳ Waiting 30 seconds for services to be ready (database, migration, and seeding require time)...'
+                sleep 30 
             }
         }
         
@@ -84,9 +81,7 @@ pipeline {
         stage('Show Container Status') {
             steps {
                 echo '📊 Container status:'
-                sh '''
-                    docker compose -f ${DOCKER_COMPOSE_FILE} ps
-                '''
+                sh "docker compose -f ${DOCKER_COMPOSE_FILE} ps"
             }
         }
     }
@@ -94,22 +89,15 @@ pipeline {
     post {
         success {
             echo '✅ Pipeline completed successfully!'
-            echo '🌐 Application URLs:'
-            echo '    Frontend: http://localhost:3000/products'
-            echo '    Backend API: http://localhost:4000/api/products'
         }
         failure {
-            echo '❌ Pipeline failed!'
-            sh '''
-                echo "Container logs:"
-                docker compose -f ${DOCKER_COMPOSE_FILE} logs --tail=50
-            '''
+            echo '❌ Pipeline failed! Review logs below.'
+            sh "docker compose -f ${DOCKER_COMPOSE_FILE} logs --tail=50"
         }
         always {
-            echo '🧹 Cleaning up...'
-            // Removed the `docker system prune -f` in favor of more targeted cleanup in 'Stop Old Containers'
-            // but kept a safeguard here if needed, adding '|| true'
-            sh 'docker system prune -f || true' 
+            echo '🧹 Cleaning up old Docker build cache...'
+            // Clean up unused images/data to save space
+            sh "docker system prune -f || true"
         }
     }
 }
