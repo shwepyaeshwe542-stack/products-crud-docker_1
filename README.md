@@ -11,4 +11,4 @@ Full-stack e-commerce product management system with automated CI/CD pipeline us
 - ✅ Docker containerization
 - ✅ Automated CI/CD with Jenkins
 - ✅ Health checks and monitoring
-- ✅ Seed data for testing
+- ✅ Seed data for testinggit remote add origin
