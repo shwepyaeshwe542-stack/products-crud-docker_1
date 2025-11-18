@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
     
@@ -15,6 +14,15 @@ pipeline {
             }
         }
         
+        // 🌟 NEW STAGE TO CREATE .env FILE
+        stage('Prepare Environment') {
+            steps {
+                echo '📝 Creating .env file from .env.example...'
+                // This step copies the example file so Docker Compose can read the variables.
+                sh 'cp .env.example .env' 
+            }
+        }
+
         stage('Environment Check') {
             steps {
                 echo '🔍 Checking environment...'
@@ -31,11 +39,15 @@ pipeline {
             }
         }
         
+        // 🌟 MODIFIED STAGE FOR ROBUST CLEANUP
         stage('Stop Old Containers') {
             steps {
-                echo '🛑 Stopping old containers...'
+                echo '🛑 Stopping and cleaning up old containers...'
                 sh '''
-                    docker compose -f ${DOCKER_COMPOSE_FILE} down || true
+                    # Try to bring down the environment, removing orphans and volumes for a clean start.
+                    # The '|| true' ensures the pipeline doesn't fail if nothing is running.
+                    # --remove-orphans flag helps clean up containers not managed by the current compose file.
+                    docker compose -f ${DOCKER_COMPOSE_FILE} down -v --remove-orphans || true
                 '''
             }
         }
@@ -44,6 +56,7 @@ pipeline {
             steps {
                 echo '🔨 Building Docker images...'
                 sh '''
+                    # Docker Compose will now read variables from the newly created .env file
                     docker compose -f ${DOCKER_COMPOSE_FILE} build --no-cache
                 '''
             }
@@ -58,6 +71,7 @@ pipeline {
             }
         }
         
+        // ... (Rest of the stages remain the same)
         stage('Wait for Services') {
             steps {
                 echo '⏳ Waiting for services to be ready...'
@@ -92,8 +106,8 @@ pipeline {
         success {
             echo '✅ Pipeline completed successfully!'
             echo '🌐 Application URLs:'
-            echo '   Frontend: http://localhost:3000/products'
-            echo '   Backend API: http://localhost:4000/api/products'
+            echo '    Frontend: http://localhost:3000/products'
+            echo '    Backend API: http://localhost:4000/api/products'
         }
         failure {
             echo '❌ Pipeline failed!'
@@ -104,10 +118,9 @@ pipeline {
         }
         always {
             echo '🧹 Cleaning up...'
-            sh '''
-                docker system prune -f || true
-            '''
+            // Removed the `docker system prune -f` in favor of more targeted cleanup in 'Stop Old Containers'
+            // but kept a safeguard here if needed, adding '|| true'
+            sh 'docker system prune -f || true' 
         }
     }
 }
-
