@@ -29,11 +29,18 @@ pipeline {
                 echo '🛑 Stopping and aggressively removing old containers to prevent conflicts...'
                 sh "docker compose -f ${DOCKER_COMPOSE_FILE} down || true"
                 
-                // IMPORTANT UPDATE: Forcefully remove common conflicting container names found during failed deploys
-                // This targets the conflicting container name 'products_db' explicitly,
-                // alongside the default Docker Compose names.
+                // --- FIX: AGGRESSIVELY REMOVE ALL POTENTIAL CONFLICTING CONTAINERS ---
+                // This ensures removal of containers created by the current Docker Compose project 
+                // AND containers created with simple names (e.g., from old 'docker run' commands or older compose setups).
                 sh '''
-                    docker rm -f ${COMPOSE_PROJECT_NAME}_db ${COMPOSE_PROJECT_NAME}_backend ${COMPOSE_PROJECT_NAME}_frontend products_db || true
+                    docker rm -f \
+                    ${COMPOSE_PROJECT_NAME}_db \
+                    ${COMPOSE_PROJECT_NAME}_backend \
+                    ${COMPOSE_PROJECT_NAME}_frontend \
+                    products_db \
+                    products_backend \
+                    products_frontend \
+                    || true
                 '''
                 
                 // Clean up network residue
@@ -85,7 +92,7 @@ pipeline {
         }
         failure {
             echo '❌ Pipeline failed! Review logs below.'
-            sh "docker compose -f ${DOCKER_COMPOSE_FILE} logs --tail=50 || true" // Added || true to prevent post-build failure if containers are gone
+            sh "docker compose -f ${DOCKER_COMPOSE_FILE} logs --tail=50 || true"
         }
         always {
             echo '🧹 Cleaning up old Docker build cache...'
