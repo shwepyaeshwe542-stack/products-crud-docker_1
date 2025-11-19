@@ -9,7 +9,8 @@ export default function ProductEditForm({ id }) {
     name: '',
     slug: '',
     price: '',
-    categoryId: '',
+    category: '', // Changed from categoryId to category
+    stock: '0',
     description: '',
     image: null
   });
@@ -25,12 +26,12 @@ export default function ProductEditForm({ id }) {
     fetch(`${API_BASE}/api/products/${id}`)
       .then(res => res.json())
       .then(json => {
-        console.log(json);
         setForm({
           name: json.name,
           slug: json.slug,
           price: json.price,
-          categoryId: json.categoryId.toString(),
+          category: json.category || '', // Changed from categoryId to category
+          stock: json.stock || '0',
           description: json.description || '',
           image: null
         });
@@ -65,7 +66,8 @@ export default function ProductEditForm({ id }) {
     formData.append('name', form.name);
     formData.append('slug', form.slug);
     formData.append('price', form.price);
-    formData.append('categoryId', form.categoryId);
+    formData.append('category', form.category); // Changed from categoryId to category
+    formData.append('stock', form.stock);
     if (form.description) formData.append('description', form.description);
     if (form.image) formData.append('image', form.image);
 
@@ -125,16 +127,28 @@ export default function ProductEditForm({ id }) {
         <div className="form-group">
           <label>Category *</label>
           <select
-            name='categoryId'
-            value={form.categoryId}
+            name='category'
+            value={form.category}
             onChange={handleChange}
             required
           >
             <option value="">Select Category</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            {categories.map((cat, index) => (
+              <option key={index} value={cat}>{cat}</option>
             ))}
           </select>
+        </div>
+
+        <div className="form-group">
+          <label>Stock</label>
+          <input
+            name='stock'
+            value={form.stock}
+            onChange={handleChange}
+            type='number'
+            min="0"
+            placeholder='0'
+          />
         </div>
         
         <div className="form-group">

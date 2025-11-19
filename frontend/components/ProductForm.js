@@ -9,7 +9,8 @@ export default function ProductForm() {
     name: "",
     slug: "",
     price: "",
-    categoryId: "",
+    category: "", // Changed from categoryId to category
+    stock: "0",
     description: "",
     image: null
   });
@@ -29,6 +30,18 @@ export default function ProductForm() {
       ...prev,
       [name]: value
     }));
+
+    // Auto-generate slug from name
+    if (name === 'name') {
+      const slug = value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      setForm(prev => ({
+        ...prev,
+        slug
+      }));
+    }
   }
 
   const handleImageChange = (e) => {
@@ -45,13 +58,13 @@ export default function ProductForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(form);
 
     const formData = new FormData();
     formData.append('name', form.name);
     formData.append('slug', form.slug);
     formData.append('price', form.price);
-    formData.append('categoryId', form.categoryId);
+    formData.append('category', form.category); // Changed from categoryId to category
+    formData.append('stock', form.stock);
     if (form.description) formData.append('description', form.description);
     if (form.image) formData.append('image', form.image);
 
@@ -75,6 +88,7 @@ export default function ProductForm() {
           <label>Product Name *</label>
           <input
             name='name'
+            value={form.name}
             type='text'
             placeholder='Enter product name'
             onChange={handleChange}
@@ -86,6 +100,7 @@ export default function ProductForm() {
           <label>Slug *</label>
           <input
             name='slug'
+            value={form.slug}
             type='text'
             placeholder='product-slug'
             onChange={handleChange}
@@ -97,6 +112,7 @@ export default function ProductForm() {
           <label>Price *</label>
           <input
             name='price'
+            value={form.price}
             type='number'
             step='0.01'
             placeholder='0.00'
@@ -108,21 +124,35 @@ export default function ProductForm() {
         <div className="form-group">
           <label>Category *</label>
           <select
-            name='categoryId'
+            name='category'
+            value={form.category}
             onChange={handleChange}
             required
           >
             <option value="">Select Category</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            {categories.map((cat, index) => (
+              <option key={index} value={cat}>{cat}</option>
             ))}
           </select>
+        </div>
+
+        <div className="form-group">
+          <label>Stock</label>
+          <input
+            name='stock'
+            value={form.stock}
+            type='number'
+            min="0"
+            placeholder='0'
+            onChange={handleChange}
+          />
         </div>
         
         <div className="form-group">
           <label>Description</label>
           <textarea
             name='description'
+            value={form.description}
             placeholder='Enter product description'
             onChange={handleChange}
             rows={5}

@@ -12,7 +12,6 @@ export default function ProductDetails({ id }) {
     fetch(`${API_BASE}/api/products/${id}`)
       .then(res => res.json())
       .then(json => {
-        console.log(json);
         setProduct(json);
         setLoading(false);
       })
@@ -29,15 +28,11 @@ export default function ProductDetails({ id }) {
     <div className="product-detail">
       <div className="product-detail-grid">
         
-        {/* === COLUMN 1: IMAGE (Correctly placed as the first grid item) === */}
         <div>
           {product.imageUrl ? (
             <img
               src={`http://localhost:4000${product.imageUrl}`}
               alt={product.name}
-              /* Note: Tailwind classes 'w-full h-96 object-cover rounded-lg' should be merged 
-                 with 'product-detail-image' or removed if not using Tailwind. 
-                 I've kept them as they were in your code. */
               className="product-detail-image w-full h-96 object-cover rounded-lg"
               onError={(e) => {
                 e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800';
@@ -50,11 +45,13 @@ export default function ProductDetails({ id }) {
           )}
         </div>
         
-        {/* === COLUMN 2: INFO (Correctly placed as the second grid item) === */}
         <div className="product-detail-info">
           <h2>{product.name}</h2>
-          <div className="product-detail-category">{product.category?.name || 'Uncategorized'}</div>
+          <div className="product-detail-category">{product.category || 'Uncategorized'}</div>
           <div className="product-detail-price">${product.price}</div>
+          <div className="product-detail-stock">
+            <strong>Stock:</strong> {product.stock || 0} units
+          </div>
           <div className="product-detail-description">
             <strong>Description:</strong><br />
             {product.description || 'No description available'}

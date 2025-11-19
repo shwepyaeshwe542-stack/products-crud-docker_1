@@ -16,6 +16,7 @@ export default function Page() {
   const [totalPages, setTotalPages] = useState(1);
   const limit = 12;
 
+  // Fetch categories
   useEffect(() => {
     fetch(`${API_BASE}/api/categories`)
       .then(res => res.json())
@@ -25,14 +26,16 @@ export default function Page() {
       .catch(err => console.error(err));
   }, []);
 
+  // Fetch products with filters
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
     });
+    
     if (query) params.append('search', query);
-    if (categoryFilter) params.append('categoryId', categoryFilter);
+    if (categoryFilter) params.append('category', categoryFilter); // Changed from categoryId to category
     if (minPrice) params.append('minPrice', minPrice);
     if (maxPrice) params.append('maxPrice', maxPrice);
 
@@ -58,11 +61,15 @@ export default function Page() {
     const data = await res.json();
     if (res.ok) {
       alert(`Product "${name}" deleted.`);
-      // Reload the page or re-fetch products after successful deletion
       window.location.href = '/products';
     } else {
       alert(data.error);
     }
+  };
+
+  const applyFilters = () => {
+    setQuery(search);
+    setPage(1);
   };
 
   if (loading) return <div className="loading">Loading products...</div>;
@@ -88,13 +95,13 @@ export default function Page() {
               placeholder="Search for products..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') applyFilters();
+              }}
             />
             <button
               className="btn btn-primary"
-              onClick={() => {
-                setQuery(search);
-                setPage(1);
-              }}
+              onClick={applyFilters}
             >
               Search
             </button>
@@ -122,21 +129,29 @@ export default function Page() {
               }}
             >
               <option value="">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              {categories.map((cat, index) => (
+                <option key={index} value={cat}>{cat}</option>
               ))}
             </select>
             <input
               type="number"
               placeholder="Min Price"
               value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
+              onChange={(e) => {
+                setMinPrice(e.target.value);
+                setPage(1);
+              }}
+              step="0.01"
             />
             <input
               type="number"
               placeholder="Max Price"
               value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
+              onChange={(e) => {
+                setMaxPrice(e.target.value);
+                setPage(1);
+              }}
+              step="0.01"
             />
           </div>
         </div>
@@ -148,8 +163,6 @@ export default function Page() {
         <div className="products-grid">
           {products.map((p) => (
             <div key={p.id} className="product-card">
-              
-              {/* --- UPDATED IMAGE RENDERING PART --- */}
               <div className="product-image">
                 {p.imageUrl ? (
                   <img
@@ -166,10 +179,9 @@ export default function Page() {
                   </div>
                 )}
               </div>
-              {/* ------------------------------------- */}
               
               <div className="product-info">
-                <div className="product-category">{p.category?.name || 'Uncategorized'}</div>
+                <div className="product-category">{p.category || 'Uncategorized'}</div>
                 <div className="product-name">{p.name}</div>
                 <div className="product-price">${p.price}</div>
                 <div className="product-actions">
