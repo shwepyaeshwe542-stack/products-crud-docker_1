@@ -58,6 +58,7 @@ export default function Page() {
     const data = await res.json();
     if (res.ok) {
       alert(`Product "${name}" deleted.`);
+      // Reload the page or re-fetch products after successful deletion
       window.location.href = '/products';
     } else {
       alert(data.error);
@@ -147,13 +148,26 @@ export default function Page() {
         <div className="products-grid">
           {products.map((p) => (
             <div key={p.id} className="product-card">
+              
+              {/* --- UPDATED IMAGE RENDERING PART --- */}
               <div className="product-image">
                 {p.imageUrl ? (
-                  <img src={`${API_BASE}${p.imageUrl}`} alt={p.name} />
+                  <img
+                    src={`http://localhost:4000${p.imageUrl}`}
+                    alt={p.name}
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400';
+                    }}
+                  />
                 ) : (
-                  <span>No Image</span>
+                  <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+                    <span className="text-gray-400">No Image</span>
+                  </div>
                 )}
               </div>
+              {/* ------------------------------------- */}
+              
               <div className="product-info">
                 <div className="product-category">{p.category?.name || 'Uncategorized'}</div>
                 <div className="product-name">{p.name}</div>

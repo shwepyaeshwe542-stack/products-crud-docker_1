@@ -28,20 +28,29 @@ export default function ProductDetails({ id }) {
   return (
     <div className="product-detail">
       <div className="product-detail-grid">
+        
+        {/* === COLUMN 1: IMAGE (Correctly placed as the first grid item) === */}
         <div>
           {product.imageUrl ? (
-            <img 
-              src={`${API_BASE}${product.imageUrl}`} 
+            <img
+              src={`http://localhost:4000${product.imageUrl}`}
               alt={product.name}
-              className="product-detail-image"
+              /* Note: Tailwind classes 'w-full h-96 object-cover rounded-lg' should be merged 
+                 with 'product-detail-image' or removed if not using Tailwind. 
+                 I've kept them as they were in your code. */
+              className="product-detail-image w-full h-96 object-cover rounded-lg"
+              onError={(e) => {
+                e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800';
+              }}
             />
           ) : (
-            <div style={{ padding: '100px', background: '#f5f5f5', textAlign: 'center', borderRadius: '8px' }}>
-              No Image Available
+            <div className="product-detail-image w-full h-96 bg-gray-200 flex items-center justify-center rounded-lg">
+              <span className="text-gray-400 text-xl">No Image Available</span>
             </div>
           )}
         </div>
         
+        {/* === COLUMN 2: INFO (Correctly placed as the second grid item) === */}
         <div className="product-detail-info">
           <h2>{product.name}</h2>
           <div className="product-detail-category">{product.category?.name || 'Uncategorized'}</div>
@@ -59,6 +68,7 @@ export default function ProductDetails({ id }) {
             <a href="/products" className="btn btn-secondary">Back to Products</a>
           </div>
         </div>
+        
       </div>
     </div>
   )
