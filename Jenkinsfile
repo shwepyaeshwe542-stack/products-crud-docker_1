@@ -18,31 +18,26 @@ pipeline {
         stage('Prepare Environment') {
             steps {
                 echo '📝 Creating .env file from .env.example and setting password...'
-                sh '''
-                    # 1. Copy the example file to the active .env file
-                    cp .env.example .env
-                    
-                    # 2. IMPORTANT: Use sed to replace the placeholder password with the actual password expected by docker-compose.yml
-                    # We use 'postgres123' here based on your previous input.
-                    sed -i 's/your_password_here/postgres123/g' .env 
-                '''
+                sh 'cp .env.example .env'
+                // Use single quotes for sed command to prevent Jenkins Groovy interpolation
+                sh "sed -i 's/your_password_here/postgres123/g' .env"
             }
         }
         
         stage('Stop Old Containers') {
             steps {
                 echo '🛑 Stopping and aggressively removing old containers to prevent conflicts...'
+                sh "docker compose -f ${DOCKER_COMPOSE_FILE} down || true"
+                
+                // IMPORTANT UPDATE: Forcefully remove common conflicting container names found during failed deploys
+                // This targets the conflicting container name 'products_db' explicitly,
+                // alongside the default Docker Compose names.
                 sh '''
-                    # 1. Stop and remove services defined in docker-compose.yml
-                    docker compose -f ${DOCKER_COMPOSE_FILE} down || true
-                    
-                    # 2. Forcefully remove old containers and network remnants by their derived names (critical fix)
-                    # The '|| true' ensures the pipeline doesn't fail if the containers don't exist yet.
-                    docker rm -f ${COMPOSE_PROJECT_NAME}_db || true
-                    docker rm -f ${COMPOSE_PROJECT_NAME}_backend || true
-                    docker rm -f ${COMPOSE_PROJECT_NAME}_frontend || true
-                    docker network rm ${COMPOSE_PROJECT_NAME}_default || true
+                    docker rm -f ${COMPOSE_PROJECT_NAME}_db ${COMPOSE_PROJECT_NAME}_backend ${COMPOSE_PROJECT_NAME}_frontend products_db || true
                 '''
+                
+                // Clean up network residue
+                sh "docker network rm ${COMPOSE_PROJECT_NAME}_default || true"
             }
         }
         
@@ -71,10 +66,8 @@ pipeline {
         stage('Health Check') {
             steps {
                 echo '🏥 Running health checks...'
-                sh '''
-                    chmod +x health-check.sh
-                    ./health-check.sh
-                '''
+                sh 'chmod +x health-check.sh'
+                sh './health-check.sh'
             }
         }
         
@@ -92,7 +85,7 @@ pipeline {
         }
         failure {
             echo '❌ Pipeline failed! Review logs below.'
-            sh "docker compose -f ${DOCKER_COMPOSE_FILE} logs --tail=50"
+            sh "docker compose -f ${DOCKER_COMPOSE_FILE} logs --tail=50 || true" // Added || true to prevent post-build failure if containers are gone
         }
         always {
             echo '🧹 Cleaning up old Docker build cache...'
