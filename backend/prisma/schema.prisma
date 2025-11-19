@@ -21,3 +21,8 @@ model Product {
 
   @@map("products")
 }
+
+// Add seed configuration
+generator seed {
+  provider = "prisma-client-js"
+}
