@@ -26,5 +26,5 @@ RUN mkdir -p uploads
 # The server runs on port 4000
 EXPOSE 4000
 
-# Wait for database, run migrations, seed, then start
+# Wait for database, run migrations, then start
 CMD ["sh", "-c", "sleep 15 && npx prisma migrate deploy && npm start"]
