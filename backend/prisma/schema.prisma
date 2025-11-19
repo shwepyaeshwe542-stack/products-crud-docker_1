@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -20,9 +21,4 @@ model Product {
   updatedAt   DateTime @updatedAt
 
   @@map("products")
-}
-
-// Add seed configuration
-generator seed {
-  provider = "prisma-client-js"
 }
