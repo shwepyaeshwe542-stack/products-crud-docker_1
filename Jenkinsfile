@@ -2,7 +2,6 @@ pipeline {
     agent any
     
     environment {
-        // Keeps the project name consistent across runs
         COMPOSE_PROJECT_NAME = 'products-crud'
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
     }
@@ -14,74 +13,76 @@ pipeline {
                 checkout scm
             }
         }
-
-        stage('Prepare Environment') {
+        
+        stage('Environment Check') {
             steps {
-                echo '📝 Creating .env file from .env.example and setting password...'
-                sh 'cp .env.example .env'
-                // Use single quotes for sed command to prevent Jenkins Groovy interpolation
-                sh "sed -i 's/your_password_here/postgres123/g' .env"
+                echo '🔍 Checking environment...'
+                sh '''
+                    echo "Docker version:"
+                    docker --version
+                    echo "Docker Compose version:"
+                    docker compose version
+                    echo "Current directory:"
+                    pwd
+                    echo "Files in directory:"
+                    ls -la
+                '''
             }
         }
         
         stage('Stop Old Containers') {
             steps {
-                echo '🛑 Stopping and aggressively removing old containers to prevent conflicts...'
-                sh "docker compose -f ${DOCKER_COMPOSE_FILE} down || true"
-                
-                // --- FIX: AGGRESSIVELY REMOVE ALL POTENTIAL CONFLICTING CONTAINERS ---
-                // This ensures removal of containers created by the current Docker Compose project 
-                // AND containers created with simple names (e.g., from old 'docker run' commands or older compose setups).
+                echo '🛑 Stopping old containers...'
                 sh '''
-                    docker rm -f \
-                    ${COMPOSE_PROJECT_NAME}_db \
-                    ${COMPOSE_PROJECT_NAME}_backend \
-                    ${COMPOSE_PROJECT_NAME}_frontend \
-                    products_db \
-                    products_backend \
-                    products_frontend \
-                    || true
+                    docker compose -f ${DOCKER_COMPOSE_FILE} down || true
                 '''
-                
-                // Clean up network residue
-                sh "docker network rm ${COMPOSE_PROJECT_NAME}_default || true"
             }
         }
         
         stage('Build') {
             steps {
-                echo '🔨 Building Docker images (using latest code and Dockerfile fixes)...'
-                // --no-cache ensures we rebuild with the latest code/Dockerfile fixes
-                sh "docker compose -f ${DOCKER_COMPOSE_FILE} build --no-cache"
+                echo '🔨 Building Docker images...'
+                sh '''
+                    docker compose -f ${DOCKER_COMPOSE_FILE} build --no-cache
+                '''
             }
         }
         
         stage('Deploy') {
             steps {
                 echo '🚀 Deploying with Docker Compose...'
-                sh "docker compose -f ${DOCKER_COMPOSE_FILE} up -d"
+                sh '''
+                    docker compose -f ${DOCKER_COMPOSE_FILE} up -d
+                '''
             }
         }
         
         stage('Wait for Services') {
             steps {
-                echo '⏳ Waiting 30 seconds for services to be ready (database, migration, and seeding require time)...'
-                sleep 30 
+                echo '⏳ Waiting for services to be ready...'
+                sh '''
+                    echo "Waiting 30 seconds for services to start..."
+                    sleep 30
+                '''
             }
         }
         
         stage('Health Check') {
             steps {
                 echo '🏥 Running health checks...'
-                sh 'chmod +x health-check.sh'
-                sh './health-check.sh'
+                sh '''
+                    chmod +x health-check.sh
+                    ./health-check.sh
+                '''
             }
         }
         
         stage('Show Container Status') {
             steps {
                 echo '📊 Container status:'
-                sh "docker compose -f ${DOCKER_COMPOSE_FILE} ps"
+                sh '''
+                    docker compose -f ${DOCKER_COMPOSE_FILE} ps
+                '''
             }
         }
     }
@@ -89,15 +90,22 @@ pipeline {
     post {
         success {
             echo '✅ Pipeline completed successfully!'
+            echo '🌐 Application URLs:'
+            echo '   Frontend: http://localhost:3000/products'
+            echo '   Backend API: http://localhost:4000/api/products'
         }
         failure {
-            echo '❌ Pipeline failed! Review logs below.'
-            sh "docker compose -f ${DOCKER_COMPOSE_FILE} logs --tail=50 || true"
+            echo '❌ Pipeline failed!'
+            sh '''
+                echo "Container logs:"
+                docker compose -f ${DOCKER_COMPOSE_FILE} logs --tail=50
+            '''
         }
         always {
-            echo '🧹 Cleaning up old Docker build cache...'
-            // Clean up unused images/data to save space
-            sh "docker system prune -f || true"
+            echo '🧹 Cleaning up...'
+            sh '''
+                docker system prune -f || true
+            '''
         }
     }
 }
