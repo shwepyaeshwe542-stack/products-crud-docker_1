@@ -32,9 +32,19 @@ pipeline {
         
         stage('Stop Old Containers') {
             steps {
-                echo '🛑 Stopping old containers...'
+                echo '🛑 Stopping old containers and cleaning up...'
                 sh '''
+                    # Stop all compose projects
                     docker compose -f ${DOCKER_COMPOSE_FILE} down || true
+                    
+                    # Force remove any containers with these names
+                    docker rm -f products_db products_backend products_frontend || true
+                    
+                    # Remove any orphaned containers
+                    docker container prune -f || true
+                    
+                    # Remove unused networks
+                    docker network prune -f || true
                 '''
             }
         }
@@ -102,9 +112,9 @@ pipeline {
             '''
         }
         always {
-            echo '🧹 Cleaning up...'
+            echo '🧹 Cleaning up dangling images...'
             sh '''
-                docker system prune -f || true
+                docker image prune -f || true
             '''
         }
     }
