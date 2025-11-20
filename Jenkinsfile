@@ -34,8 +34,8 @@ pipeline {
             steps {
                 echo '🛑 Stopping old containers and cleaning up...'
                 sh '''
-                    # Stop all compose projects
-                    docker compose -f ${DOCKER_COMPOSE_FILE} down || true
+                    # Stop all compose projects and remove volumes
+                    docker compose -f ${DOCKER_COMPOSE_FILE} down -v || true
                     
                     # Force remove any containers with these names
                     docker rm -f products_db products_backend products_frontend || true
@@ -45,6 +45,9 @@ pipeline {
                     
                     # Remove unused networks
                     docker network prune -f || true
+                    
+                    # Remove dangling volumes
+                    docker volume prune -f || true
                 '''
             }
         }
@@ -92,6 +95,7 @@ pipeline {
                 echo '📊 Container status:'
                 sh '''
                     docker compose -f ${DOCKER_COMPOSE_FILE} ps
+                    docker compose -f ${DOCKER_COMPOSE_FILE} logs backend --tail=20
                 '''
             }
         }
