@@ -16,7 +16,6 @@ export default function Page() {
   const [totalPages, setTotalPages] = useState(1);
   const limit = 12;
 
-  // Fetch categories
   useEffect(() => {
     fetch(`${API_BASE}/api/categories`)
       .then(res => res.json())
@@ -26,16 +25,14 @@ export default function Page() {
       .catch(err => console.error(err));
   }, []);
 
-  // Fetch products with filters
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
     });
-    
     if (query) params.append('search', query);
-    if (categoryFilter) params.append('category', categoryFilter); // Changed from categoryId to category
+    if (categoryFilter) params.append('categoryId', categoryFilter);
     if (minPrice) params.append('minPrice', minPrice);
     if (maxPrice) params.append('maxPrice', maxPrice);
 
@@ -67,11 +64,6 @@ export default function Page() {
     }
   };
 
-  const applyFilters = () => {
-    setQuery(search);
-    setPage(1);
-  };
-
   if (loading) return <div className="loading">Loading products...</div>;
 
   return (
@@ -95,13 +87,13 @@ export default function Page() {
               placeholder="Search for products..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') applyFilters();
-              }}
             />
             <button
               className="btn btn-primary"
-              onClick={applyFilters}
+              onClick={() => {
+                setQuery(search);
+                setPage(1);
+              }}
             >
               Search
             </button>
@@ -129,29 +121,21 @@ export default function Page() {
               }}
             >
               <option value="">All Categories</option>
-              {categories.map((cat, index) => (
-                <option key={index} value={cat}>{cat}</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
             <input
               type="number"
               placeholder="Min Price"
               value={minPrice}
-              onChange={(e) => {
-                setMinPrice(e.target.value);
-                setPage(1);
-              }}
-              step="0.01"
+              onChange={(e) => setMinPrice(e.target.value)}
             />
             <input
               type="number"
               placeholder="Max Price"
               value={maxPrice}
-              onChange={(e) => {
-                setMaxPrice(e.target.value);
-                setPage(1);
-              }}
-              step="0.01"
+              onChange={(e) => setMaxPrice(e.target.value)}
             />
           </div>
         </div>
@@ -165,23 +149,13 @@ export default function Page() {
             <div key={p.id} className="product-card">
               <div className="product-image">
                 {p.imageUrl ? (
-                  <img
-                    src={`http://localhost:4000${p.imageUrl}`}
-                    alt={p.name}
-                    className="w-full h-48 object-cover"
-                    onError={(e) => {
-                      e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400';
-                    }}
-                  />
+                  <img src={`${API_BASE}${p.imageUrl}`} alt={p.name} />
                 ) : (
-                  <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-400">No Image</span>
-                  </div>
+                  <span>No Image</span>
                 )}
               </div>
-              
               <div className="product-info">
-                <div className="product-category">{p.category || 'Uncategorized'}</div>
+                <div className="product-category">{p.category?.name || 'Uncategorized'}</div>
                 <div className="product-name">{p.name}</div>
                 <div className="product-price">${p.price}</div>
                 <div className="product-actions">

@@ -12,6 +12,7 @@ export default function ProductDetails({ id }) {
     fetch(`${API_BASE}/api/products/${id}`)
       .then(res => res.json())
       .then(json => {
+        console.log(json);
         setProduct(json);
         setLoading(false);
       })
@@ -27,31 +28,24 @@ export default function ProductDetails({ id }) {
   return (
     <div className="product-detail">
       <div className="product-detail-grid">
-        
         <div>
           {product.imageUrl ? (
-            <img
-              src={`http://localhost:4000${product.imageUrl}`}
+            <img 
+              src={`${API_BASE}${product.imageUrl}`} 
               alt={product.name}
-              className="product-detail-image w-full h-96 object-cover rounded-lg"
-              onError={(e) => {
-                e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800';
-              }}
+              className="product-detail-image"
             />
           ) : (
-            <div className="product-detail-image w-full h-96 bg-gray-200 flex items-center justify-center rounded-lg">
-              <span className="text-gray-400 text-xl">No Image Available</span>
+            <div style={{ padding: '100px', background: '#f5f5f5', textAlign: 'center', borderRadius: '8px' }}>
+              No Image Available
             </div>
           )}
         </div>
         
         <div className="product-detail-info">
           <h2>{product.name}</h2>
-          <div className="product-detail-category">{product.category || 'Uncategorized'}</div>
+          <div className="product-detail-category">{product.category?.name || 'Uncategorized'}</div>
           <div className="product-detail-price">${product.price}</div>
-          <div className="product-detail-stock">
-            <strong>Stock:</strong> {product.stock || 0} units
-          </div>
           <div className="product-detail-description">
             <strong>Description:</strong><br />
             {product.description || 'No description available'}
@@ -65,7 +59,6 @@ export default function ProductDetails({ id }) {
             <a href="/products" className="btn btn-secondary">Back to Products</a>
           </div>
         </div>
-        
       </div>
     </div>
   )
